@@ -19,6 +19,53 @@ This project is built with a modern React stack, utilizing a mock backend (`axio
 
 ---
 
+## ✨ Functional Features
+
+### 📊 Dashboard & Analytics
+*   **Real-time Overview**: Key metrics tracking (Total Stock Value, Low Stock Items, Monthly Revenue).
+*   **Interactive Charts**: Visual sales trends (Bar/Line charts) and inventory distribution.
+*   **Low Stock Alerts**: Instant notifications for items falling below configurable thresholds.
+
+### 📦 Inventory Management
+*   **Stock Tracking**: Comprehensive grid view with search, filtering by category, and pagination.
+*   **Bulk Actions**: Select multiple items to delete or update quantities in one go.
+*   **Category Management**: Create, rename, and delete product categories.
+*   **Export Data**: Download inventory data as CSV.
+*   **Low Stock Settings**: Configurable threshold for low stock warnings.
+
+### 🧾 Billing & Invoices
+*   **Invoice Generation**: Create professional invoices with dynamic line items, tax calculations, and due dates.
+*   **Status Tracking**: Monitor paid, pending, and overdue invoices.
+*   **Export Options**: Export invoices to Excel or PDF (Simulated).
+*   **Financial Overview**: Track total receivables and paid amounts.
+
+### 💳 Payments & Installments
+*   **EMI Calculator**: Built-in tool to calculate monthly payments based on principal, rate, and duration.
+*   **Plan Management**: Track customer installment plans, remaining balances, and next due dates.
+*   **Payment Schedule**: Detailed breakdown of principal vs. interest for every installment.
+
+### 👥 Customer Relationship Management (CRM)
+*   **Customer Profiles**: detailed view of customer info, total spend, and join date.
+*   **Purchase History**: View all past invoices associated with a specific customer.
+*   **Notes System**: Keep track of customer preferences and interactions.
+
+### 🤖 AI Studio (Powered by Gemini)
+*   **AI Assistant**: Chat interface for business queries and task automation (e.g., "Remind me to order stock").
+*   **Image Generator**: Create marketing visuals for products using text prompts (supports 1K/2K/4K resolution).
+*   **Smart Suggestions**: AI-driven insights for business operations.
+
+### 👤 User & Access Management
+*   **Multi-User Support**: Add employees (Managers/Staff) based on subscription limits.
+*   **RBAC**: Strict Role-Based Access Control ensuring Staff cannot perform sensitive actions (like deleting stock).
+*   **Plan Management**: View and upgrade subscription tiers (Starter, Pro, Enterprise).
+
+### ⚙️ General Settings
+*   **Dark Mode**: Fully supported dark theme.
+*   **Multi-Language**: Toggle between English and Khmer support.
+*   **Profile Management**: Update user details and avatar.
+
+---
+
 ## 🔐 Architecture & Multi-tenancy
 
 ### 1. Multi-tenancy Strategy
@@ -142,4 +189,3 @@ To migrate this from the mock adapter to a real backend (Node.js/Python/Go):
     *   Extract `shopId` and `role` from the token claims or database.
     *   Inject `shopId` into every database query to ensure isolation.
 4.  **RBAC Middleware**: Create a middleware to check permissions (e.g., `requireRole(['manager', 'admin'])`) for sensitive routes.
-
