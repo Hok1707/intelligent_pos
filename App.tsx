@@ -1,3 +1,4 @@
+
 import React, { useEffect, Suspense, lazy, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
@@ -15,10 +16,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 // Lazy Load Pages
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Reports = lazy(() => import('./pages/Reports'));
 const Stock = lazy(() => import('./pages/Stock'));
 const Subscriptions = lazy(() => import('./pages/Subscriptions'));
 const Payments = lazy(() => import('./pages/Payments'));
+const Invoices = lazy(() => import('./pages/Invoices'));
 const AiTools = lazy(() => import('./pages/AiTools'));
+const Users = lazy(() => import('./pages/Users'));
+const Customers = lazy(() => import('./pages/Customers'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Profile = lazy(() => import('./pages/Profile'));
 
 // Mock Login Component
 const Login = () => {
@@ -89,7 +97,7 @@ const Login = () => {
           <div>
             <div className="flex justify-between items-center mb-1.5">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">{t('Password')}</label>
-                <a href="#" className="text-sm text-primary dark:text-blue-400 font-medium hover:underline">{t('Forgot password?')}</a>
+                <Link to="/forgot-password" className="text-sm text-primary dark:text-blue-400 font-medium hover:underline">{t('Forgot password?')}</Link>
             </div>
             <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
@@ -120,9 +128,14 @@ const Login = () => {
 
 const Register = () => {
   const { t, toggleTheme, theme, language, setLanguage } = useThemeStore();
-  const { login } = useAuthStore();
+  const { register: registerUser, isAuthenticated, isLoading } = useAuthStore();
   const navigate = useNavigate();
-  const [isVerifying, setIsVerifying] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const registerSchema = z.object({
     username: z.string().min(3, t('Username min length')),
@@ -141,20 +154,11 @@ const Register = () => {
   });
 
   const onSubmit = async (data: RegisterForm) => {
-    setIsVerifying(true);
-    
-    // Mock API simulation (Gmail verification)
-    // In a real app, this would trigger an email or OAuth flow
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Mock "isVerify" check
-    const isVerify = true; 
-
-    if (isVerify) {
-        login(data.email, data.username);
-        navigate('/dashboard');
-    }
-    setIsVerifying(false);
+    await registerUser({
+      username: data.username,
+      email: data.email,
+      password: data.password
+    });
   };
 
   return (
@@ -218,37 +222,37 @@ const Register = () => {
             </div>
             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
           </div>
-          
+
           <div>
-             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('Password')}</label>
-             <div className="relative">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('Password')}</label>
+            <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
                 <input 
+                    type="password"
                     {...register('password')}
-                    type="password" 
                     className={`w-full border ${errors.password ? 'border-red-500' : 'border-slate-200 dark:border-slate-600'} dark:bg-slate-700 dark:text-white rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all`}
                     placeholder="••••••••"
                 />
-             </div>
-             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+            </div>
+            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
           </div>
 
           <div>
-             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('Confirm Password')}</label>
-             <div className="relative">
-                <CheckCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('Confirm Password')}</label>
+            <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
                 <input 
+                    type="password"
                     {...register('confirmPassword')}
-                    type="password" 
                     className={`w-full border ${errors.confirmPassword ? 'border-red-500' : 'border-slate-200 dark:border-slate-600'} dark:bg-slate-700 dark:text-white rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all`}
                     placeholder="••••••••"
                 />
-             </div>
-             {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>}
+            </div>
+            {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>}
           </div>
 
-          <button type="submit" disabled={isVerifying} className="w-full bg-primary text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center group disabled:opacity-70 disabled:cursor-not-allowed">
-            {isVerifying ? (
+          <button type="submit" disabled={isLoading} className="w-full bg-primary text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center group disabled:opacity-70 disabled:cursor-not-allowed">
+            {isLoading ? (
                 <>
                     <Loader2 className="animate-spin mr-2 h-4 w-4" />
                     <span>{t('Verifying')}</span>
@@ -272,44 +276,22 @@ const Register = () => {
   );
 };
 
-// Protected Route Wrapper
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
-  if (!isAuthenticated) return <Navigate to="/login" />;
-  return <Layout>{children}</Layout>;
-};
+// Protected Route Component
+interface ProtectedRouteProps {
+  children?: React.ReactNode;
+  allowedRoles?: ('admin' | 'manager' | 'staff')[];
+}
 
-// Tier Requirement Guard
-const TIER_LEVELS: Record<SubscriptionTier, number> = {
-  'starter': 1,
-  'pro': 2,
-  'enterprise': 3
-};
+const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
+  const { isAuthenticated, user } = useAuthStore();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
 
-const RequireTier: React.FC<{ children: React.ReactNode; tier: SubscriptionTier }> = ({ children, tier }) => {
-  const { user } = useAuthStore();
-  const { t } = useThemeStore();
-  const userLevel = user ? TIER_LEVELS[user.plan] : 0;
-  const requiredLevel = TIER_LEVELS[tier];
-
-  if (userLevel < requiredLevel) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-full mb-6">
-            <ShieldAlert className="w-12 h-12 text-red-500" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{t('Access Restricted')}</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md">
-          {t('Feature requires')} <span className="font-bold capitalize">{tier}</span> {t('plan or higher')}
-        </p>
-        <Link 
-          to="/subscriptions" 
-          className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors"
-        >
-          {t('View Upgrade Options')}
-        </Link>
-      </div>
-    );
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // Redirect to dashboard if not authorized for this route
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -317,7 +299,8 @@ const RequireTier: React.FC<{ children: React.ReactNode; tier: SubscriptionTier 
 
 const App: React.FC = () => {
   const { theme } = useThemeStore();
-
+  const { isAuthenticated } = useAuthStore();
+  
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -331,20 +314,23 @@ const App: React.FC = () => {
       <ErrorBoundary>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             
-            {/* Protected Routes with Tier Gating */}
-            <Route path="/dashboard" element={<ProtectedRoute><RequireTier tier="starter"><Dashboard /></RequireTier></ProtectedRoute>} />
-            <Route path="/stock" element={<ProtectedRoute><RequireTier tier="starter"><Stock /></RequireTier></ProtectedRoute>} />
-            <Route path="/subscriptions" element={<ProtectedRoute><RequireTier tier="starter"><Subscriptions /></RequireTier></ProtectedRoute>} />
-            
-            {/* Pro Tier Route */}
-            <Route path="/payments" element={<ProtectedRoute><RequireTier tier="pro"><Payments /></RequireTier></ProtectedRoute>} />
-            
-            {/* Enterprise Tier Route */}
-            <Route path="/ai-tools" element={<ProtectedRoute><RequireTier tier="enterprise"><AiTools /></RequireTier></ProtectedRoute>} />
+            {/* Protected Routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />
+            <Route path="/stock" element={<ProtectedRoute><Layout><Stock /></Layout></ProtectedRoute>} />
+            <Route path="/subscriptions" element={<ProtectedRoute><Layout><Subscriptions /></Layout></ProtectedRoute>} />
+            <Route path="/payments" element={<ProtectedRoute><Layout><Payments /></Layout></ProtectedRoute>} />
+            <Route path="/invoices" element={<ProtectedRoute><Layout><Invoices /></Layout></ProtectedRoute>} />
+            <Route path="/ai-tools" element={<ProtectedRoute><Layout><AiTools /></Layout></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute allowedRoles={['admin']}><Layout><Users /></Layout></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute><Layout><Customers /></Layout></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
             
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

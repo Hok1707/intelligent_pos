@@ -1,13 +1,31 @@
+
+
 export type SubscriptionTier = 'starter' | 'pro' | 'enterprise';
 
 export interface User {
   id: string;
+  shopId: string; // key for multi-tenancy
   name: string;
   email: string;
   role: 'admin' | 'manager' | 'staff';
   avatar?: string;
   plan: SubscriptionTier;
   token?: string;
+  phone?: string;
+  status?: 'active' | 'inactive';
+}
+
+export interface Customer {
+  id: string;
+  shopId: string;
+  name: string;
+  email: string;
+  phone: string;
+  address?: string;
+  totalSpent: number;
+  status: 'active' | 'inactive';
+  joinDate: string;
+  notes?: string;
 }
 
 export interface ApiResponse<T> {
@@ -18,9 +36,10 @@ export interface ApiResponse<T> {
 
 export interface StockItem {
   id: string;
+  shopId: string;
   name: string;
   sku: string;
-  category: 'Phone' | 'Accessory' | 'Part';
+  category: string;
   price: number;
   quantity: number;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
@@ -34,10 +53,12 @@ export interface SubscriptionPlan {
   price: number;
   durationMonths: number;
   features: string[];
+  maxUsers: number;
 }
 
 export interface InstallmentPlan {
   id: string;
+  shopId: string;
   customerName: string;
   deviceName: string;
   totalAmount: number;
@@ -74,4 +95,25 @@ export interface Task {
   text: string;
   completed: boolean;
   createdAt: Date;
+}
+
+export interface InvoiceItem {
+  id: string;
+  description: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Invoice {
+  id: string;
+  shopId: string;
+  number: string;
+  customerName: string;
+  date: string;
+  dueDate: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  status: 'paid' | 'pending' | 'overdue';
 }

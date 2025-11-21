@@ -1,20 +1,145 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# SmartPOS - AI-Powered Smartphone Shop Management System
 
-# Run and deploy your AI Studio app
+SmartPOS is a comprehensive SaaS solution designed for smartphone retailers. It combines Point of Sale (POS), Inventory Management, Customer Relationship Management (CRM), and advanced AI tools powered by Google Gemini.
 
-This contains everything you need to run your app locally.
+## 🚀 Project Overview
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Ot89tBpLItFb6FHqpVY-cW62F6wjQxCF
+This project is built with a modern React stack, utilizing a mock backend (`axios-mock-adapter`) to simulate a real-world API environment. It is designed with multi-tenancy at its core, allowing multiple shops to operate in isolation on the same platform.
 
-## Run Locally
+### Tech Stack
 
-**Prerequisites:**  Node.js
+*   **Frontend**: React 18, TypeScript, Vite
+*   **State Management**: Zustand (with persistence for theme/auth)
+*   **UI Framework**: Tailwind CSS
+*   **Routing**: React Router v6
+*   **Forms**: React Hook Form + Zod
+*   **Charts**: Recharts
+*   **AI Integration**: Google GenAI SDK (Gemini 1.5 Flash / Pro)
+*   **Mock Backend**: Axios Mock Adapter
 
+---
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🔐 Architecture & Multi-tenancy
+
+### 1. Multi-tenancy Strategy
+The application uses a **Discriminator Column** strategy. Every primary entity (User, StockItem, Customer, Invoice) contains a `shopId` field.
+*   **Isolation**: The backend (simulated in `services/api.ts`) filters all data queries by the logged-in user's `shopId`.
+*   **Global Admin**: Users with the `admin` role ignore this filter and can see data across all shops.
+
+### 2. Authentication
+*   **Token-based**: Uses a simulated JWT token stored in `localStorage`.
+*   **Interceptor**: An Axios interceptor automatically attaches the `Authorization: Bearer <token>` header to every request.
+
+---
+
+## 🛡️ Role-Based Access Control (RBAC)
+
+The system defines three primary roles: `admin`, `manager`, and `staff`.
+
+| Feature / Action | Admin (Global) | Manager (Shop Owner) | Staff |
+| :--- | :---: | :---: | :---: |
+| **Scope** | All Shops | Own Shop Only | Own Shop Only |
+| **View Dashboard** | ✅ | ✅ | ✅ |
+| **Manage Stock** | ✅ (Create/Edit/Delete) | ✅ (Create/Edit/Delete) | ⚠️ View/Edit Only (No Delete) |
+| **View Reports** | ✅ | ✅ | ❌ |
+| **Manage Users** | ✅ | ✅ | ❌ |
+| **Manage Plans** | ✅ | ✅ | ❌ |
+| **Billing/Invoices** | ✅ | ✅ | ✅ |
+| **AI Tools** | ✅ | ✅ | ✅ |
+| **Export Data** | ✅ | ✅ | ❌ |
+
+### Implementation Details
+*   **UI Level**: Navigation links (Reports, Users, Plans) are hidden for Staff in `Layout.tsx`. Action buttons (Delete Stock, Add User) are hidden in respective pages (`Stock.tsx`, `Users.tsx`).
+*   **API Level**: The mock backend (`api.ts`) inspects the user's role before processing sensitive requests (`DELETE`, `POST /users`) and returns `403 Forbidden` if unauthorized.
+
+---
+
+## 💾 Data Models
+
+### User
+```typescript
+interface User {
+  id: string;
+  shopId: string;      // Partition Key
+  name: string;
+  email: string;
+  role: 'admin' | 'manager' | 'staff';
+  plan: 'starter' | 'pro' | 'enterprise';
+  status: 'active' | 'inactive';
+  // ... other profile fields
+}
+```
+
+### StockItem
+```typescript
+interface StockItem {
+  id: string;
+  shopId: string;      // Partition Key
+  name: string;
+  sku: string;
+  category: string;
+  price: number;
+  quantity: number;
+  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+}
+```
+
+### Customer
+```typescript
+interface Customer {
+  id: string;
+  shopId: string;      // Partition Key
+  name: string;
+  email: string;
+  phone: string;
+  totalSpent: number;
+  // ... address, notes
+}
+```
+
+### Invoice
+```typescript
+interface Invoice {
+  id: string;
+  shopId: string;      // Partition Key
+  customerName: string;
+  total: number;
+  status: 'paid' | 'pending' | 'overdue';
+  items: InvoiceItem[];
+}
+```
+
+---
+
+## 🔌 API Endpoints (Mocked)
+
+All endpoints are prefixed with `/api/v1` (simulated).
+
+### Auth
+*   `POST /auth/login`: Returns User object + Token.
+*   `POST /auth/register`: Creates a new Manager user and a new `shopId`.
+*   `PUT /auth/profile/:id`: Update profile details.
+
+### Resources
+*   `GET /stock`: Returns items for current `shopId`.
+*   `POST /stock`: Create item (Manager/Staff).
+*   `PUT /stock/:id`: Update item (Manager/Staff).
+*   `DELETE /stock/:id`: Delete item (**Manager Only**).
+*   `GET /users`: Returns employees for current `shopId`.
+*   `POST /users`: Create employee (**Manager Only**).
+*   `DELETE /users/:id`: Delete employee (**Manager Only**).
+
+---
+
+## 🛠️ Setup for Backend Implementation
+
+To migrate this from the mock adapter to a real backend (Node.js/Python/Go):
+
+1.  **Remove Mock Adapter**: Delete `services/api.ts` (or the mock setup block within it).
+2.  **Environment Variables**: Set `REACT_APP_API_URL` to your backend server URL.
+3.  **Middleware**: Implement a middleware in your backend to:
+    *   Verify the JWT token.
+    *   Extract `shopId` and `role` from the token claims or database.
+    *   Inject `shopId` into every database query to ensure isolation.
+4.  **RBAC Middleware**: Create a middleware to check permissions (e.g., `requireRole(['manager', 'admin'])`) for sensitive routes.
+

@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { User, SubscriptionTier } from '../types';
 import { useNotificationStore } from './notificationStore';
@@ -9,6 +10,7 @@ interface AuthState {
   isLoading: boolean;
   login: (email: string, name?: string) => Promise<void>;
   register: (data: { username: string; email: string; password: string }) => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
   logout: () => void;
   setSubscription: (tier: SubscriptionTier) => void;
 }
@@ -62,6 +64,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             type: 'error',
             title: 'Registration Failed',
             message: 'Could not create account.'
+          });
+      } finally {
+          set({ isLoading: false });
+      }
+  },
+
+  updateProfile: async (data) => {
+      const currentUser = get().user;
+      if (!currentUser) return;
+      
+      set({ isLoading: true });
+      try {
+          const response = await authService.updateProfile(currentUser.id, data);
+          if (response.success) {
+              set({ user: response.data });
+              useNotificationStore.getState().addNotification({
+                type: 'success',
+                message: 'Profile updated successfully'
+            });
+          }
+      } catch (error) {
+        useNotificationStore.getState().addNotification({
+            type: 'error',
+            message: 'Failed to update profile'
           });
       } finally {
           set({ isLoading: false });

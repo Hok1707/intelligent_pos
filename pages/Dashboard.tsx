@@ -1,16 +1,27 @@
+
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useStockStore } from '../store/stockStore';
 import { useThemeStore } from '../store/themeStore';
-import { TrendingUp, AlertTriangle, Users, DollarSign } from 'lucide-react';
+import { TrendingUp, AlertTriangle, Users, DollarSign, ArrowRight, Package } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
-  const { items } = useStockStore();
+  const { items, lowStockThreshold, categories } = useStockStore();
   const { t } = useThemeStore();
 
-  const lowStockCount = items.filter(i => i.quantity < 5).length;
+  const lowStockItems = items.filter(i => i.quantity < lowStockThreshold && i.quantity > 0);
+  const lowStockCount = lowStockItems.length;
   const totalStockValue = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+  // Calculate category distribution from real data
+  const categoryData = categories.map(cat => ({
+    name: cat,
+    value: items.filter(i => i.category === cat).length
+  })).filter(d => d.value > 0);
+
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   const salesData = [
     { name: 'Mon', sales: 4000 },
@@ -43,7 +54,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <motion.div 
-      className="space-y-6"
+      className="space-y-6 pb-6"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -82,7 +93,7 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* Charts */}
+      {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div 
           variants={itemVariants}
@@ -123,6 +134,83 @@ const Dashboard: React.FC = () => {
             </LineChart>
           </ResponsiveContainer>
         </motion.div>
+      </div>
+
+      {/* Charts Row 2 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+         {/* Stock Distribution */}
+         <motion.div 
+            variants={itemVariants}
+            className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 min-h-[320px]"
+         >
+            <h3 className="text-lg font-semibold mb-4 dark:text-white">Inventory Distribution</h3>
+            <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                    <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                    >
+                        {categoryData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                    </Pie>
+                    <Tooltip 
+                        contentStyle={{ backgroundColor: '#1e293b', borderRadius: '8px', border: 'none', color: '#fff' }}
+                    />
+                    <Legend />
+                </PieChart>
+            </ResponsiveContainer>
+         </motion.div>
+
+         {/* Low Stock Alerts List */}
+         <motion.div 
+            variants={itemVariants}
+            className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700"
+         >
+             <div className="flex items-center justify-between mb-4">
+                 <h3 className="text-lg font-semibold dark:text-white flex items-center">
+                    <AlertTriangle className="w-5 h-5 text-orange-500 mr-2" /> 
+                    Low Stock Alerts
+                 </h3>
+                 <Link to="/stock" className="text-sm text-primary hover:underline flex items-center">
+                    View All <ArrowRight size={14} className="ml-1" />
+                 </Link>
+             </div>
+             
+             <div className="overflow-hidden">
+                 {lowStockItems.length > 0 ? (
+                     <div className="space-y-3">
+                         {lowStockItems.slice(0, 4).map(item => (
+                             <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg border border-slate-100 dark:border-slate-700">
+                                 <div className="flex items-center space-x-3">
+                                     <div className="p-2 bg-white dark:bg-slate-800 rounded-md shadow-sm">
+                                        <Package className="w-5 h-5 text-slate-500" />
+                                     </div>
+                                     <div>
+                                         <p className="font-medium text-slate-900 dark:text-white">{item.name}</p>
+                                         <p className="text-xs text-slate-500 dark:text-slate-400">SKU: {item.sku}</p>
+                                     </div>
+                                 </div>
+                                 <div className="text-right">
+                                     <p className="font-bold text-orange-600 dark:text-orange-400">{item.quantity} left</p>
+                                     <p className="text-xs text-slate-400">Threshold: {lowStockThreshold}</p>
+                                 </div>
+                             </div>
+                         ))}
+                     </div>
+                 ) : (
+                     <div className="flex flex-col items-center justify-center h-48 text-slate-400">
+                         <Package className="w-12 h-12 mb-2 opacity-20" />
+                         <p>All items are well stocked!</p>
+                     </div>
+                 )}
+             </div>
+         </motion.div>
       </div>
     </motion.div>
   );

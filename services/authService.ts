@@ -1,3 +1,4 @@
+
 import api from './api';
 import { ApiResponse, User } from '../types';
 
@@ -9,6 +10,11 @@ export const authService = {
 
   register: async (data: { username: string; email: string; password: string }) => {
     const response = await api.post<ApiResponse<User>>('/auth/register', data);
+    return response.data;
+  },
+
+  updateProfile: async (id: string, data: Partial<User>) => {
+    const response = await api.put<ApiResponse<User>>(`/auth/profile/${id}`, data);
     return response.data;
   },
 

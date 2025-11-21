@@ -1,8 +1,9 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+import React, { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface State {
@@ -10,11 +11,14 @@ interface State {
   error: Error | null;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null
-  };
+class ErrorBoundary extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null
+    };
+  }
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
@@ -37,33 +41,30 @@ class ErrorBoundary extends Component<Props, State> {
               Something went wrong
             </h2>
             
-            <p className="text-slate-600 dark:text-slate-400 mb-8">
-              We encountered an unexpected error. Please try refreshing the page or return to the dashboard.
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              We apologize for the inconvenience. Please try refreshing the page or return to the dashboard.
             </p>
-
-            <div className="space-y-3">
+            
+            <div className="flex space-x-3 justify-center">
               <button
                 onClick={() => window.location.reload()}
-                className="w-full flex items-center justify-center px-4 py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-700 transition-colors"
+                className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <RefreshCw className="w-4 h-4 mr-2" />
+                <RefreshCw size={18} className="mr-2" />
                 Reload Page
               </button>
-              
               <button
                 onClick={() => window.location.href = '/'}
-                className="w-full flex items-center justify-center px-4 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-white rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                className="flex items-center px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
-                <Home className="w-4 h-4 mr-2" />
-                Return Home
+                <Home size={18} className="mr-2" />
+                Home
               </button>
             </div>
-            
+
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="mt-8 p-4 bg-slate-100 dark:bg-slate-900 rounded-lg text-left overflow-auto max-h-40">
-                <p className="font-mono text-xs text-red-600 dark:text-red-400 break-words">
-                  {this.state.error.toString()}
-                </p>
+              <div className="mt-8 text-left p-4 bg-said slate-100 dark:bg-slate-900 rounded-lg overflow-auto max-h-40 text-xs text-red-600 font-mono">
+                {this.state.error.toString()}
               </div>
             )}
           </div>

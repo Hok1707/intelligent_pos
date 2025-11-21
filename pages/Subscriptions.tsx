@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import { Check, Clock, X, Shield, Zap, Star } from 'lucide-react';
 import { SubscriptionPlan, SubscriptionTier } from '../types';
@@ -46,6 +48,7 @@ const Subscriptions: React.FC = () => {
       features: [t('Basic Dashboard'), t('Inventory Management'), t('Standard Support'), t('1 Admin User')], 
       longDescription: t('Starter Desc'),
       idealFor: t('Ideal Small'),
+      maxUsers: 1,
     },
     { 
       id: '2', 
@@ -56,6 +59,7 @@ const Subscriptions: React.FC = () => {
       features: [t('Everything in Starter'), t('Installment Management'), t('Customer CRM'), t('Advanced Analytics'), t('Email Support')], 
       longDescription: t('Pro Desc'),
       idealFor: t('Ideal Growing'),
+      maxUsers: 5,
     },
     { 
       id: '3', 
@@ -66,6 +70,7 @@ const Subscriptions: React.FC = () => {
       features: [t('Everything in Pro'), t('Gemini 3 Pro AI Assistant'), t('Image Generation Studio'), t('Unlimited AI Tokens'), t('Priority 24/7 Support')], 
       longDescription: t('Enterprise Desc'),
       idealFor: t('Ideal Enterprise'),
+      maxUsers: 9999,
     },
   ];
 
@@ -129,16 +134,25 @@ const Subscriptions: React.FC = () => {
                      <Check className="mr-2 h-5 w-5" /> {t('Active Plan')}
                    </button>
                 ) : (
-                  <button 
-                    onClick={() => handleSubscribe(plan.tier)}
-                    className={`w-full py-3 rounded-xl font-bold transition-colors ${
-                      plan.tier === 'enterprise'
-                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200' 
-                      : 'bg-primary text-white hover:bg-blue-700'
-                    }`}
-                  >
-                    {t('Switch to')} {plan.name}
-                  </button>
+                  user?.role === 'admin' ? (
+                    <button 
+                      onClick={() => handleSubscribe(plan.tier)}
+                      className={`w-full py-3 rounded-xl font-bold transition-colors ${
+                        plan.tier === 'enterprise'
+                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200' 
+                        : 'bg-primary text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      {t('Switch to')} {plan.name}
+                    </button>
+                  ) : (
+                    <button 
+                      disabled
+                      className="w-full py-3 rounded-xl font-bold bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                    >
+                      {t('Admin Only')}
+                    </button>
+                  )
                 )}
                 <button 
                     onClick={() => setSelectedPlan(plan)}
@@ -224,7 +238,7 @@ const Subscriptions: React.FC = () => {
                 >
                     {t('Close')}
                 </button>
-                {user?.plan !== selectedPlan.tier && (
+                {user?.plan !== selectedPlan.tier && user?.role === 'admin' && (
                     <button 
                         onClick={() => handleSubscribe(selectedPlan.tier)}
                         className="px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all transform hover:scale-105"
