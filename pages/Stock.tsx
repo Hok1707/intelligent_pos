@@ -1,11 +1,10 @@
 
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useStockStore } from '../store/stockStore';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
-import { Plus, Search, Trash2, Edit, AlertCircle, CheckSquare, Square, Layers, X, ChevronDown, Loader2, Settings, Download, Check } from 'lucide-react';
-import { StockItem } from '../types';
+import { Plus, Search, Trash2, Edit, AlertCircle, CheckSquare, Square, Layers, X, ChevronDown, Loader2, Settings, Download, Check, Clock, History, Image as ImageIcon, Upload } from 'lucide-react';
+import { StockItem, StockLog } from '../types';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,7 +19,8 @@ const Stock: React.FC = () => {
     updateItem, 
     deleteItems, 
     updateQuantities, 
-    fetchItems, 
+    fetchItems,
+    fetchLogs,
     isLoading, 
     lowStockThreshold, 
     setLowStockThreshold,
@@ -37,8 +37,12 @@ const Stock: React.FC = () => {
   const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<StockItem | null>(null);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
+  const [historyItem, setHistoryItem] = useState<StockItem | null>(null);
+  const [itemLogs, setItemLogs] = useState<StockLog[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkQuantity, setBulkQuantity] = useState(0);
   const [newThreshold, setNewThreshold] = useState(lowStockThreshold);
@@ -137,6 +141,15 @@ const Stock: React.FC = () => {
     setShowModal(true);
   };
 
+  const handleViewHistory = async (item: StockItem) => {
+      setHistoryItem(item);
+      setShowHistoryModal(true);
+      setIsLoadingLogs(true);
+      const logs = await fetchLogs(item.id);
+      setItemLogs(logs);
+      setIsLoadingLogs(false);
+  };
+
   const handleAdd = () => {
     setEditingItem(null);
     setShowModal(true);
@@ -228,7 +241,7 @@ const Stock: React.FC = () => {
   };
 
   const handleExportCSV = () => {
-    const headers = [t('Item Name'), 'SKU', t('Category'), t('Brand'), t('Price'), t('Quantity'), t('Status')];
+    const headers = [t('Item Name'), 'SKU', t('Category'), t('Brand'), 'Unit Price (Cost)', t('Price'), t('Quantity'), t('Status')];
     
     const rows = filteredItems.map(item => {
       const status = getItemStatus(item.quantity);
@@ -237,6 +250,7 @@ const Stock: React.FC = () => {
         `"${item.sku.replace(/"/g, '""')}"`,
         `"${item.category.replace(/"/g, '""')}"`,
         `"${item.brand.replace(/"/g, '""')}"`,
+        item.costPrice || 0,
         item.price,
         item.quantity,
         `"${status}"`
@@ -422,15 +436,13 @@ const Stock: React.FC = () => {
                                 >
                                     <Edit size={16} className="mr-2 text-slate-400" /> {t('Update Stock')}
                                 </button>
-                                {/* Staff cannot delete */}
-                                {user?.role !== 'staff' && (
-                                    <button 
-                                        onClick={handleBulkDelete}
-                                        className="w-full text-left px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center border-t border-slate-100 dark:border-slate-700"
-                                    >
-                                        <Trash2 size={16} className="mr-2" /> {t('Delete Selected')}
-                                    </button>
-                                )}
+                                {/* Staff CAN delete now */}
+                                <button 
+                                    onClick={handleBulkDelete}
+                                    className="w-full text-left px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center border-t border-slate-100 dark:border-slate-700"
+                                >
+                                    <Trash2 size={16} className="mr-2" /> {t('Delete Selected')}
+                                </button>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -461,7 +473,7 @@ const Stock: React.FC = () => {
 
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left min-w-[800px]">
+          <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th className="px-4 py-4 w-12 text-center">
@@ -469,19 +481,20 @@ const Stock: React.FC = () => {
                         {isAllPageSelected ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
                     </button>
                 </th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t('Item Name')}</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">SKU</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t('Category')}</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t('Price')}</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t('Stock Level')}</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t('Status')}</th>
-                <th className="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300 text-right">{t('Actions')}</th>
+                <th className="px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300 w-16"></th>
+                <th className="px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t('Item Name')}</th>
+                <th className="px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300 hidden lg:table-cell">SKU</th>
+                <th className="px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300 hidden xl:table-cell">{t('Category')}</th>
+                <th className="px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300 hidden 2xl:table-cell">Cost Price</th>
+                <th className="px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t('Price')}</th>
+                <th className="px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{t('Stock Level')}</th>
+                <th className="px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300 hidden sm:table-cell">{t('Status')}</th>
+                <th className="px-4 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300 text-right">{t('Actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               <AnimatePresence mode="wait">
                 {paginatedItems.map((item, index) => {
-                  // Calculate status dynamically based on quantity and configured threshold
                   const status = getItemStatus(item.quantity);
                   
                   return (
@@ -498,40 +511,61 @@ const Stock: React.FC = () => {
                             {selectedIds.has(item.id) ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
                         </button>
                     </td>
-                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{item.name}</td>
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{item.sku}</td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                    <td className="px-4 py-4">
+                        {item.image ? (
+                            <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-600" />
+                        ) : (
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400">
+                                <ImageIcon size={16} />
+                            </div>
+                        )}
+                    </td>
+                    <td className="px-4 py-4 font-medium text-slate-900 dark:text-white">
+                        <div>{item.name}</div>
+                        {/* Show SKU on smaller screens where column is hidden */}
+                        <div className="text-xs text-slate-500 lg:hidden">{item.sku}</div>
+                    </td>
+                    <td className="px-4 py-4 text-slate-500 dark:text-slate-400 hidden lg:table-cell">{item.sku}</td>
+                    <td className="px-4 py-4 text-slate-600 dark:text-slate-300 hidden xl:table-cell">
                         <span className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md text-xs">{item.category}</span>
                     </td>
-                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">${item.price}</td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{item.quantity} units</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium
+                    <td className="px-4 py-4 text-slate-600 dark:text-slate-300 hidden 2xl:table-cell">${item.costPrice || 0}</td>
+                    <td className="px-4 py-4 font-medium text-slate-900 dark:text-white">${item.price}</td>
+                    <td className="px-4 py-4 text-slate-600 dark:text-slate-300">
+                        {item.quantity} <span className="text-xs text-slate-400">units</span>
+                    </td>
+                    <td className="px-4 py-4 hidden sm:table-cell">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap
                         ${status === 'In Stock' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                           status === 'Low Stock' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
                           'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                         {t(status)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex items-center justify-end space-x-1">
+                          {/* Condensed actions for responsiveness */}
+                          <button
+                          onClick={() => handleViewHistory(item)}
+                          className="text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary transition-colors p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
+                          title="View History"
+                          >
+                          <Clock size={18} />
+                          </button>
                           <button
                           onClick={() => handleEdit(item)}
-                          className="text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary transition-colors p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
+                          className="text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary transition-colors p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
                           title={t('Edit Item')}
                           >
                           <Edit size={18} />
                           </button>
-                          {/* Staff cannot delete */}
-                          {user?.role !== 'staff' && (
-                            <button
-                            onClick={() => handleDelete(item)}
-                            className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-                            title={t('Delete Item')}
-                            >
-                            <Trash2 size={18} />
-                            </button>
-                          )}
+                          <button
+                          onClick={() => handleDelete(item)}
+                          className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title={t('Delete Item')}
+                          >
+                          <Trash2 size={18} />
+                          </button>
                       </div>
                     </td>
                   </motion.tr>
@@ -539,7 +573,7 @@ const Stock: React.FC = () => {
               </AnimatePresence>
               {!isLoading && filteredItems.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={10} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                     {t('No items found')}
                   </td>
                 </tr>
@@ -575,58 +609,72 @@ const Stock: React.FC = () => {
                                 className={`bg-white dark:bg-slate-800 rounded-xl border ${selectedIds.has(item.id) ? 'border-primary ring-1 ring-primary/20' : 'border-slate-200 dark:border-slate-700'} shadow-sm overflow-hidden`}
                             >
                                 <div className="p-4">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="flex items-start gap-3">
-                                            <button onClick={() => toggleSelection(item.id)} className="mt-1 text-slate-400 hover:text-primary">
-                                                {selectedIds.has(item.id) ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
-                                            </button>
-                                            <div>
-                                                <h3 className="font-bold text-slate-900 dark:text-white">{item.name}</h3>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400">SKU: {item.sku}</p>
+                                    <div className="flex items-start gap-3 mb-3">
+                                        <button onClick={() => toggleSelection(item.id)} className="mt-1 text-slate-400 hover:text-primary shrink-0">
+                                            {selectedIds.has(item.id) ? <CheckSquare size={20} className="text-primary" /> : <Square size={20} />}
+                                        </button>
+                                        {item.image ? (
+                                            <img src={item.image} alt={item.name} className="w-16 h-16 rounded-lg object-cover border border-slate-100 dark:border-slate-700 shrink-0" />
+                                        ) : (
+                                            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center text-slate-400 shrink-0">
+                                                <ImageIcon size={24} />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start">
+                                                <h3 className="font-bold text-slate-900 dark:text-white text-sm leading-tight mb-1 truncate">{item.name}</h3>
+                                                <span className={`ml-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide whitespace-nowrap
+                                                    ${status === 'In Stock' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                    status === 'Low Stock' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                                                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                    {t(status)}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">SKU: {item.sku}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-600 dark:text-slate-300">
+                                                    {item.category}
+                                                </span>
                                             </div>
                                         </div>
-                                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide
-                                            ${status === 'In Stock' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                            status === 'Low Stock' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                                            'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                                            {t(status)}
-                                        </span>
                                     </div>
                                     
-                                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm mb-4 pl-8">
-                                        <div>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">{t('Category')}</p>
-                                            <span className="bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-xs text-slate-700 dark:text-slate-300">{item.category}</span>
+                                    <div className="grid grid-cols-3 gap-2 text-sm bg-slate-50 dark:bg-slate-700/30 p-3 rounded-lg mb-3">
+                                        <div className="text-center border-r border-slate-200 dark:border-slate-600 last:border-0">
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Price</p>
+                                            <p className="font-bold text-slate-900 dark:text-white">${item.price}</p>
                                         </div>
-                                        <div>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">{t('Brand')}</p>
-                                            <span className="text-slate-900 dark:text-white font-medium">{item.brand}</span>
+                                        <div className="text-center border-r border-slate-200 dark:border-slate-600 last:border-0">
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Cost</p>
+                                            <p className="font-medium text-slate-700 dark:text-slate-300">${item.costPrice || 0}</p>
                                         </div>
-                                        <div>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">{t('Price')}</p>
-                                            <span className="text-slate-900 dark:text-white font-bold">${item.price}</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">{t('Stock Level')}</p>
-                                            <span className="text-slate-900 dark:text-white font-medium">{item.quantity} units</span>
+                                        <div className="text-center">
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Stock</p>
+                                            <p className={`font-bold ${item.quantity < lowStockThreshold ? 'text-orange-600' : 'text-slate-900 dark:text-white'}`}>
+                                                {item.quantity}
+                                            </p>
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-700 pt-3 pl-8">
+                                    <div className="flex justify-end gap-3">
+                                        <button
+                                            onClick={() => handleViewHistory(item)}
+                                            className="p-2 text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                                        >
+                                            <Clock size={18} />
+                                        </button>
                                         <button
                                             onClick={() => handleEdit(item)}
-                                            className="flex items-center px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                                            className="p-2 text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
                                         >
-                                            <Edit size={14} className="mr-1.5" /> {t('Edit')}
+                                            <Edit size={18} />
                                         </button>
-                                        {user?.role !== 'staff' && (
-                                            <button
-                                                onClick={() => handleDelete(item)}
-                                                className="flex items-center px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
-                                            >
-                                                <Trash2 size={14} className="mr-1.5" /> {t('Delete')}
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={() => handleDelete(item)}
+                                            className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
                                     </div>
                                 </div>
                             </motion.div>
@@ -678,6 +726,79 @@ const Stock: React.FC = () => {
                   isEditing={!!editingItem}
                   categories={categories}
               />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* History Log Modal */}
+      <AnimatePresence>
+        {showHistoryModal && historyItem && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          >
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+                animate={{ opacity: 1, scale: 1, y: 0 }} 
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-lg shadow-xl border border-slate-200 dark:border-slate-700 max-h-[80vh] flex flex-col"
+            >
+              <div className="flex justify-between items-start mb-4 border-b border-slate-100 dark:border-slate-700 pb-4">
+                  <div>
+                      <h2 className="text-xl font-bold dark:text-white flex items-center">
+                          <History className="mr-2" size={24} /> Audit Log
+                      </h2>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{historyItem.name} ({historyItem.sku})</p>
+                  </div>
+                  <button onClick={() => setShowHistoryModal(false)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full">
+                      <X size={24} />
+                  </button>
+              </div>
+              
+              <div className="overflow-y-auto flex-1 custom-scrollbar pr-2">
+                  {isLoadingLogs ? (
+                      <div className="flex justify-center py-8">
+                          <Loader2 className="animate-spin text-primary" size={24} />
+                      </div>
+                  ) : itemLogs.length > 0 ? (
+                      <div className="relative border-l border-slate-200 dark:border-slate-700 ml-3 space-y-6 py-2">
+                          {itemLogs.map((log, idx) => (
+                              <div key={idx} className="relative pl-6">
+                                  <div className={`absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-800 
+                                      ${log.action === 'create' ? 'bg-green-500' : log.action === 'delete' ? 'bg-red-500' : 'bg-blue-500'}`}>
+                                  </div>
+                                  <div className="flex flex-col">
+                                      <span className="text-xs text-slate-400 font-medium mb-0.5">
+                                          {new Date(log.timestamp).toLocaleString()}
+                                      </span>
+                                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                                          {log.userName} <span className="font-normal text-slate-500 dark:text-slate-400">({log.action})</span>
+                                      </span>
+                                      <span className="text-sm text-slate-600 dark:text-slate-300 mt-1 bg-slate-50 dark:bg-slate-700/50 p-2 rounded-lg">
+                                          {log.details}
+                                      </span>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                      <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                          No history found for this item.
+                      </div>
+                  )}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                  <button 
+                      onClick={() => setShowHistoryModal(false)}
+                      className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                  >
+                      Close
+                  </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -756,17 +877,12 @@ const Stock: React.FC = () => {
                 {itemToDelete ? t('Delete Item') : t('Delete Selected')}
               </h2>
               <p className="text-center text-slate-500 dark:text-slate-400 mb-6">
-                {itemToDelete ? (
-                    <>
-                        {t('Are you sure you want to delete')} <span className="font-bold text-slate-900 dark:text-white">{itemToDelete.name}</span>?
-                    </>
-                ) : (
-                    <>
-                        {t('Are you sure you want to delete')} <span className="font-bold text-slate-900 dark:text-white">{selectedIds.size}</span> {t('items')}?
-                    </>
-                )}
+                {itemToDelete 
+                    ? `${t('Are you sure you want to delete')} "${itemToDelete.name}"?` 
+                    : `${t('Are you sure you want to delete')} ${selectedIds.size} ${t('items')}?`
+                }
                 <br/>
-                <span className="text-xs text-red-500 mt-2 block">{t('This action cannot be undone.')}</span>
+                <span className="text-xs text-red-500 mt-1 block">{t('This action cannot be undone.')}</span>
               </p>
               
               <div className="flex justify-end space-x-3">
@@ -926,6 +1042,8 @@ interface StockFormProps {
 
 const StockForm: React.FC<StockFormProps> = ({ onClose, onSubmit, initialData, isEditing, categories }) => {
   const { t } = useThemeStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(initialData?.image || null);
   
   // Defined inside component to use 't'
   const stockSchema = z.object({
@@ -934,6 +1052,7 @@ const StockForm: React.FC<StockFormProps> = ({ onClose, onSubmit, initialData, i
     brand: z.string().min(2, t('Brand required')),
     category: z.string().min(1, 'Category required'),
     price: z.coerce.number().min(0.01, t('Price required')),
+    costPrice: z.coerce.number().min(0, 'Cost Price cannot be negative').optional(),
     quantity: z.coerce.number().int().min(0, t('Quantity required')),
   });
 
@@ -946,6 +1065,7 @@ const StockForm: React.FC<StockFormProps> = ({ onClose, onSubmit, initialData, i
         sku: initialData.sku,
         brand: initialData.brand,
         price: initialData.price,
+        costPrice: initialData.costPrice || 0,
         quantity: initialData.quantity,
         category: initialData.category
     } : {
@@ -953,14 +1073,29 @@ const StockForm: React.FC<StockFormProps> = ({ onClose, onSubmit, initialData, i
         sku: '',
         brand: '',
         price: 0,
+        costPrice: 0,
         quantity: 0,
         category: categories[0] || ''
     }
   });
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const onValidSubmit = (data: FormValues) => {
     // Pass data to parent (Partial<StockItem>)
-    onSubmit(data as Partial<StockItem>);
+    onSubmit({
+        ...data,
+        image: previewImage || undefined
+    } as Partial<StockItem>);
   };
 
   const inputBaseClass = "w-full border bg-white dark:bg-slate-700 text-slate-900 dark:text-white p-2 rounded-lg focus:ring-2 focus:ring-primary/50 focus:outline-none transition-colors";
@@ -969,6 +1104,41 @@ const StockForm: React.FC<StockFormProps> = ({ onClose, onSubmit, initialData, i
 
   return (
     <form onSubmit={handleSubmit(onValidSubmit)} className="space-y-4">
+      {/* Image Upload Section */}
+      <div className="flex justify-center mb-6">
+        <div className="relative group">
+            <div className={`w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer`}
+                 onClick={() => fileInputRef.current?.click()}
+            >
+                {previewImage ? (
+                    <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                    <div className="flex flex-col items-center text-slate-400 text-xs">
+                        <Upload size={20} className="mb-1" />
+                        <span>{t('Upload Image')}</span>
+                    </div>
+                )}
+            </div>
+            {previewImage && (
+                <button 
+                    type="button"
+                    onClick={() => setPreviewImage(null)}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600 transition-colors"
+                    title={t('Remove Image')}
+                >
+                    <X size={12} />
+                </button>
+            )}
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleImageUpload} 
+                className="hidden" 
+                accept="image/*"
+            />
+        </div>
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('Product Name')}</label>
         <input 
@@ -1013,7 +1183,17 @@ const StockForm: React.FC<StockFormProps> = ({ onClose, onSubmit, initialData, i
         {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category.message}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cost Price ($)</label>
+            <input 
+                type="number" 
+                step="0.01"
+                {...register('costPrice')}
+                className={getInputClass(!!errors.costPrice)}
+            />
+            {errors.costPrice && <p className="text-red-500 text-xs mt-1">{errors.costPrice.message}</p>}
+        </div>
         <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('Price')} ($)</label>
             <input 

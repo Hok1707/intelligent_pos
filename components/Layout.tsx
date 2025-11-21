@@ -1,8 +1,7 @@
 
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Box, CreditCard, Calendar, LogOut, Sparkles, Smartphone, Sun, Moon, Globe, Lock, Menu, X, Users as UsersIcon, FileText, User, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Box, CreditCard, Calendar, LogOut, Sparkles, Smartphone, Sun, Moon, Globe, Lock, Menu, X, Users as UsersIcon, FileText, User, BarChart3, ShoppingCart, ClipboardList, ShieldAlert } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { ToastContainer } from './Toast';
@@ -32,8 +31,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const currentTierLevel = user ? TIER_LEVELS[user.plan] : 0;
 
   // Navigation Configuration with Role Based Access Control
+  // allowedRoles: Only users with these roles can see the item.
+  // deniedRole: Users with this role CANNOT see the item.
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requiredTier: 'starter' },
+    { path: '/pos', label: 'POS', icon: ShoppingCart, requiredTier: 'starter' },
+    { path: '/orders', label: 'Orders', icon: ClipboardList, requiredTier: 'starter' },
     // Staff cannot see Reports
     { path: '/reports', label: 'Reports', icon: BarChart3, requiredTier: 'pro', deniedRole: 'staff' },
     { path: '/stock', label: 'Stock', icon: Box, requiredTier: 'starter' },
@@ -43,8 +46,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { path: '/ai-tools', label: 'AI Studio', icon: Sparkles, requiredTier: 'enterprise' },
     // Staff cannot see Plans
     { path: '/subscriptions', label: 'Plans', icon: Calendar, requiredTier: 'starter', deniedRole: 'staff' },
-    // Staff cannot see Users
-    { path: '/users', label: 'Employees', icon: UsersIcon, requiredTier: 'starter', deniedRole: 'staff' },
+    // Everyone can see Users now (Permissions handled on page)
+    { path: '/users', label: 'Employees', icon: UsersIcon, requiredTier: 'starter' },
+    // Only Admin can see Subscribers
+    { path: '/subscribers', label: 'Subscribers', icon: ShieldAlert, requiredTier: 'starter', allowedRoles: ['admin'] },
   ];
 
   const renderNavItems = (isMobile: boolean = false) => {
@@ -52,7 +57,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       const isActive = location.pathname === item.path;
       const requiredLevel = TIER_LEVELS[item.requiredTier as SubscriptionTier];
       
-      // Check denied roles (strict checking)
+      // Check allowed roles (Exclusive check)
+      if (item.allowedRoles && user && !item.allowedRoles.includes(user.role)) {
+          return null;
+      }
+
+      // Check denied roles (Exclusion check)
       if (item.deniedRole && user?.role === item.deniedRole) {
         return null;
       }
@@ -171,7 +181,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <img src={user?.avatar} alt="User" className="w-8 h-8 rounded-full bg-slate-200 object-cover border border-slate-200 dark:border-slate-600 group-hover:border-primary transition-colors" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors">{user?.name}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.role}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate capitalize">{user?.role}</p>
           </div>
         </Link>
         

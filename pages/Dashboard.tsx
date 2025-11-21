@@ -1,19 +1,38 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useStockStore } from '../store/stockStore';
+import { useOrderStore } from '../store/orderStore';
 import { useThemeStore } from '../store/themeStore';
-import { TrendingUp, AlertTriangle, Users, DollarSign, ArrowRight, Package } from 'lucide-react';
+import { TrendingUp, AlertTriangle, DollarSign, ArrowRight, Package, ShoppingCart } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
-  const { items, lowStockThreshold, categories } = useStockStore();
+  const { items, lowStockThreshold, categories, fetchItems } = useStockStore();
+  const { orders, fetchOrders } = useOrderStore();
   const { t } = useThemeStore();
+
+  useEffect(() => {
+    fetchItems();
+    fetchOrders();
+  }, []);
 
   const lowStockItems = items.filter(i => i.quantity < lowStockThreshold && i.quantity > 0);
   const lowStockCount = lowStockItems.length;
-  const totalStockValue = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  
+  // Real-time sales stats from orders
+  const totalRevenue = orders
+      .filter(o => o.status !== 'cancelled')
+      .reduce((acc, o) => acc + o.total, 0);
+  
+  const todayRevenue = orders
+      .filter(o => {
+          const orderDate = new Date(o.createdAt).toDateString();
+          const today = new Date().toDateString();
+          return orderDate === today && o.status !== 'cancelled';
+      })
+      .reduce((acc, o) => acc + o.total, 0);
 
   // Calculate category distribution from real data
   const categoryData = categories.map(cat => ({
@@ -23,14 +42,18 @@ const Dashboard: React.FC = () => {
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-  const salesData = [
-    { name: 'Mon', sales: 4000 },
-    { name: 'Tue', sales: 3000 },
-    { name: 'Wed', sales: 2000 },
-    { name: 'Thu', sales: 2780 },
-    { name: 'Fri', sales: 1890 },
-    { name: 'Sat', sales: 2390 },
-    { name: 'Sun', sales: 3490 },
+  // Simple sales chart data from orders
+  const salesData = orders.length > 0 ? orders.slice(0, 7).map(o => ({
+      name: new Date(o.createdAt).toLocaleDateString(undefined, { weekday: 'short' }),
+      sales: o.total
+  })).reverse() : [
+    { name: 'Mon', sales: 0 },
+    { name: 'Tue', sales: 0 },
+    { name: 'Wed', sales: 0 },
+    { name: 'Thu', sales: 0 },
+    { name: 'Fri', sales: 0 },
+    { name: 'Sat', sales: 0 },
+    { name: 'Sun', sales: 0 },
   ];
 
   const containerVariants: Variants = {
@@ -65,10 +88,17 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           variants={itemVariants}
-          title={t('Total Stock Value')}
-          value={`$${totalStockValue.toLocaleString()}`}
+          title={t('Total Sales')}
+          value={`$${totalRevenue.toLocaleString()}`}
           icon={<DollarSign className="text-green-600" />}
           trend="+12%"
+        />
+        <StatCard
+          variants={itemVariants}
+          title="Sales Today"
+          value={`$${todayRevenue.toLocaleString()}`}
+          icon={<ShoppingCart className="text-blue-600" />}
+          trend="Live"
         />
         <StatCard
           variants={itemVariants}
@@ -79,18 +109,104 @@ const Dashboard: React.FC = () => {
         />
         <StatCard
           variants={itemVariants}
-          title={t('Active Customers')}
-          value="1,204"
-          icon={<Users className="text-blue-600" />}
-          trend="+5%"
-        />
-        <StatCard
-          variants={itemVariants}
-          title={t('Monthly Revenue')}
-          value="$45,231"
+          title={t('Total Orders')}
+          value={orders.length.toString()}
           icon={<TrendingUp className="text-purple-600" />}
           trend="+18%"
         />
+      </div>
+
+      {/* Recent Orders & Low Stock */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         {/* Recent Orders List */}
+         <motion.div 
+            variants={itemVariants}
+            className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700"
+         >
+             <div className="flex items-center justify-between mb-4">
+                 <h3 className="text-lg font-semibold dark:text-white flex items-center">
+                    <ShoppingCart className="w-5 h-5 text-blue-500 mr-2" /> 
+                    Recent Orders
+                 </h3>
+                 <Link to="/orders" className="text-sm text-primary hover:underline flex items-center">
+                    View All <ArrowRight size={14} className="ml-1" />
+                 </Link>
+             </div>
+             
+             <div className="overflow-hidden">
+                 {orders.length > 0 ? (
+                     <div className="space-y-3">
+                         {orders.slice(0, 4).map(order => (
+                             <div key={order.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg border border-slate-100 dark:border-slate-700">
+                                 <div className="flex items-center space-x-3">
+                                     <div className="p-2 bg-white dark:bg-slate-800 rounded-md shadow-sm">
+                                        <Package className="w-5 h-5 text-slate-500" />
+                                     </div>
+                                     <div>
+                                         <p className="font-medium text-slate-900 dark:text-white">{order.orderNumber}</p>
+                                         <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(order.createdAt).toLocaleDateString()} • {order.items.length} Items</p>
+                                     </div>
+                                 </div>
+                                 <div className="text-right">
+                                     <p className="font-bold text-slate-900 dark:text-white">${order.total.toLocaleString()}</p>
+                                     <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${order.status === 'paid' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>{order.status}</span>
+                                 </div>
+                             </div>
+                         ))}
+                     </div>
+                 ) : (
+                     <div className="flex flex-col items-center justify-center h-48 text-slate-400">
+                         <ShoppingCart className="w-12 h-12 mb-2 opacity-20" />
+                         <p>No orders yet!</p>
+                     </div>
+                 )}
+             </div>
+         </motion.div>
+
+         {/* Low Stock Alerts List */}
+         <motion.div 
+            variants={itemVariants}
+            className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700"
+         >
+             <div className="flex items-center justify-between mb-4">
+                 <h3 className="text-lg font-semibold dark:text-white flex items-center">
+                    <AlertTriangle className="w-5 h-5 text-orange-500 mr-2" /> 
+                    Low Stock Alerts
+                 </h3>
+                 <Link to="/stock" className="text-sm text-primary hover:underline flex items-center">
+                    View All <ArrowRight size={14} className="ml-1" />
+                 </Link>
+             </div>
+             
+             <div className="overflow-hidden">
+                 {lowStockItems.length > 0 ? (
+                     <div className="space-y-3">
+                         {lowStockItems.slice(0, 4).map(item => (
+                             <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg border border-slate-100 dark:border-slate-700">
+                                 <div className="flex items-center space-x-3">
+                                     <div className="p-2 bg-white dark:bg-slate-800 rounded-md shadow-sm">
+                                        <Package className="w-5 h-5 text-slate-500" />
+                                     </div>
+                                     <div>
+                                         <p className="font-medium text-slate-900 dark:text-white">{item.name}</p>
+                                         <p className="text-xs text-slate-500 dark:text-slate-400">SKU: {item.sku}</p>
+                                     </div>
+                                 </div>
+                                 <div className="text-right">
+                                     <p className="font-bold text-orange-600 dark:text-orange-400">{item.quantity} left</p>
+                                     <p className="text-xs text-slate-400">Threshold: {lowStockThreshold}</p>
+                                 </div>
+                             </div>
+                         ))}
+                     </div>
+                 ) : (
+                     <div className="flex flex-col items-center justify-center h-48 text-slate-400">
+                         <Package className="w-12 h-12 mb-2 opacity-20" />
+                         <p>All items are well stocked!</p>
+                     </div>
+                 )}
+             </div>
+         </motion.div>
       </div>
 
       {/* Charts Row 1 */}
@@ -144,72 +260,33 @@ const Dashboard: React.FC = () => {
             className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 min-h-[320px]"
          >
             <h3 className="text-lg font-semibold mb-4 dark:text-white">Inventory Distribution</h3>
-            <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                    <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                    >
-                        {categoryData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                    </Pie>
-                    <Tooltip 
-                        contentStyle={{ backgroundColor: '#1e293b', borderRadius: '8px', border: 'none', color: '#fff' }}
-                    />
-                    <Legend />
-                </PieChart>
-            </ResponsiveContainer>
-         </motion.div>
-
-         {/* Low Stock Alerts List */}
-         <motion.div 
-            variants={itemVariants}
-            className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700"
-         >
-             <div className="flex items-center justify-between mb-4">
-                 <h3 className="text-lg font-semibold dark:text-white flex items-center">
-                    <AlertTriangle className="w-5 h-5 text-orange-500 mr-2" /> 
-                    Low Stock Alerts
-                 </h3>
-                 <Link to="/stock" className="text-sm text-primary hover:underline flex items-center">
-                    View All <ArrowRight size={14} className="ml-1" />
-                 </Link>
-             </div>
-             
-             <div className="overflow-hidden">
-                 {lowStockItems.length > 0 ? (
-                     <div className="space-y-3">
-                         {lowStockItems.slice(0, 4).map(item => (
-                             <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg border border-slate-100 dark:border-slate-700">
-                                 <div className="flex items-center space-x-3">
-                                     <div className="p-2 bg-white dark:bg-slate-800 rounded-md shadow-sm">
-                                        <Package className="w-5 h-5 text-slate-500" />
-                                     </div>
-                                     <div>
-                                         <p className="font-medium text-slate-900 dark:text-white">{item.name}</p>
-                                         <p className="text-xs text-slate-500 dark:text-slate-400">SKU: {item.sku}</p>
-                                     </div>
-                                 </div>
-                                 <div className="text-right">
-                                     <p className="font-bold text-orange-600 dark:text-orange-400">{item.quantity} left</p>
-                                     <p className="text-xs text-slate-400">Threshold: {lowStockThreshold}</p>
-                                 </div>
-                             </div>
-                         ))}
-                     </div>
-                 ) : (
-                     <div className="flex flex-col items-center justify-center h-48 text-slate-400">
-                         <Package className="w-12 h-12 mb-2 opacity-20" />
-                         <p>All items are well stocked!</p>
-                     </div>
-                 )}
-             </div>
+            {categoryData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                        <Pie
+                            data={categoryData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                        >
+                            {categoryData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                        </Pie>
+                        <Tooltip 
+                            contentStyle={{ backgroundColor: '#1e293b', borderRadius: '8px', border: 'none', color: '#fff' }}
+                        />
+                        <Legend />
+                    </PieChart>
+                </ResponsiveContainer>
+            ) : (
+                <div className="h-64 flex items-center justify-center text-slate-400">
+                    <p>No stock data available</p>
+                </div>
+            )}
          </motion.div>
       </div>
     </motion.div>

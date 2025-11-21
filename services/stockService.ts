@@ -1,9 +1,15 @@
+
 import api from './api';
-import { ApiResponse, StockItem } from '../types';
+import { ApiResponse, StockItem, StockLog } from '../types';
 
 export const stockService = {
   getAll: async () => {
     const response = await api.get<ApiResponse<StockItem[]>>('/stock');
+    return response.data;
+  },
+
+  getLogs: async (id: string) => {
+    const response = await api.get<ApiResponse<StockLog[]>>(`/stock/${id}/logs`);
     return response.data;
   },
 

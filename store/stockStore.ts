@@ -1,7 +1,8 @@
 
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { StockItem } from '../types';
+import { StockItem, StockLog } from '../types';
 import { useNotificationStore } from './notificationStore';
 import { stockService } from '../services/stockService';
 
@@ -11,6 +12,7 @@ interface StockState {
   lowStockThreshold: number;
   categories: string[];
   fetchItems: () => Promise<void>;
+  fetchLogs: (id: string) => Promise<StockLog[]>;
   addItem: (item: Omit<StockItem, 'id' | 'status'>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   deleteItems: (ids: string[]) => Promise<void>;
@@ -46,6 +48,19 @@ export const useStockStore = create<StockState>()(
         } finally {
           set({ isLoading: false });
         }
+      },
+
+      fetchLogs: async (id: string) => {
+         try {
+             const response = await stockService.getLogs(id);
+             if (response.success) {
+                 return response.data;
+             }
+             return [];
+         } catch (error) {
+             console.error(error);
+             return [];
+         }
       },
 
       addItem: async (newItem) => {

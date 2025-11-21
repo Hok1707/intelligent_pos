@@ -1,10 +1,9 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useUserStore } from '../store/userStore';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { Plus, Search, Trash2, Edit, Loader2, User, Shield, Mail, Phone, Lock } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, Loader2, User, Shield, Mail, Phone, Lock, AlertTriangle } from 'lucide-react';
 import { User as UserType, SubscriptionTier } from '../types';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -14,7 +13,7 @@ import { useNotificationStore } from '../store/notificationStore';
 
 // Limits definition
 const PLAN_LIMITS: Record<SubscriptionTier, number> = {
-    'starter': 1, // Just the owner
+    'starter': 2, 
     'pro': 5,
     'enterprise': 9999
 };
@@ -46,8 +45,15 @@ const Users: React.FC = () => {
   const canAddUser = isManagerOrAdmin && (currentCount < userLimit || currentUser?.role === 'admin');
 
   const handleEdit = (user: UserType) => {
-    // RBAC: Staff cannot edit users
-    if (!isManagerOrAdmin) return;
+    if (!isManagerOrAdmin) {
+        addNotification({ type: 'error', message: 'Access Denied: Staff cannot edit users.' });
+        return;
+    }
+    // Prevent Manager from editing Admin
+    if (currentUser?.role !== 'admin' && user.role === 'admin') {
+        addNotification({ type: 'error', message: 'Access Denied: Cannot edit Administrator.' });
+        return;
+    }
     setEditingUser(user);
     setShowModal(true);
   };
@@ -79,7 +85,6 @@ const Users: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    // RBAC
     if (!isManagerOrAdmin) {
         addNotification({ type: 'error', message: 'Access Denied.' });
         return;
@@ -88,21 +93,16 @@ const Users: React.FC = () => {
         addNotification({ type: 'error', message: 'You cannot delete your own account.' });
         return;
     }
+    const targetUser = users.find(u => u.id === id);
+    if (targetUser?.role === 'admin' && currentUser?.role !== 'admin') {
+        addNotification({ type: 'error', message: 'Access Denied: Cannot delete Administrator.' });
+        return;
+    }
+
     if (confirm(t('Are you sure you want to delete'))) {
       await deleteUser(id);
     }
   };
-
-  // If staff somehow navigates here, show restricted access message (though layout should prevent this)
-  if (currentUser?.role === 'staff') {
-      return (
-        <div className="flex flex-col items-center justify-center h-[50vh] text-center">
-            <Shield size={48} className="text-slate-300 mb-4" />
-            <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300">Access Restricted</h2>
-            <p className="text-slate-500">Staff members do not have permission to manage users.</p>
-        </div>
-      )
-  }
 
   return (
     <motion.div 
@@ -116,18 +116,17 @@ const Users: React.FC = () => {
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('User Management')}</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 {currentUser?.role === 'admin' 
-                    ? 'Global Admin View - Managing all users across all shops'
+                    ? 'Global Admin View'
                     : `${currentCount} / ${userLimit === 9999 ? '∞' : userLimit} users used in your plan`
                 }
             </p>
         </div>
         <button
           onClick={handleAdd}
-          disabled={!canAddUser}
           className={`flex items-center justify-center px-4 py-2 rounded-lg transition-colors shadow-sm ${
               canAddUser 
               ? 'bg-primary text-white hover:bg-blue-700 hover:shadow-md' 
-              : 'bg-slate-200 text-slate-500 cursor-not-allowed dark:bg-slate-700 dark:text-slate-400'
+              : 'bg-primary text-white hover:bg-blue-700' // Keep active style for access denied click
           }`}
         >
             {canAddUser ? <Plus size={20} className="mr-2" /> : <Lock size={18} className="mr-2" />} 
@@ -196,26 +195,27 @@ const Users: React.FC = () => {
                                         }`}>
                                         {t(user.role)}
                                     </span>
-                                    {/* Debug Shop ID for Admin */}
-                                    {currentUser?.role === 'admin' && (
-                                        <span className="text-[10px] text-slate-400 font-mono">{user.shopId.substring(0,6)}...</span>
-                                    )}
                                 </div>
                             </div>
                         </div>
                         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
-                                onClick={() => handleEdit(user)}
-                                className="p-2 text-slate-400 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                            >
-                                <Edit size={16} />
-                            </button>
-                            <button 
-                                onClick={() => handleDelete(user.id)}
-                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                            >
-                                <Trash2 size={16} />
-                            </button>
+                            {/* Only allow edit/delete if not acting on a higher privilege role */}
+                            {!(currentUser?.role !== 'admin' && user.role === 'admin') && (
+                                <>
+                                    <button 
+                                        onClick={() => handleEdit(user)}
+                                        className="p-2 text-slate-400 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                                    >
+                                        <Edit size={16} />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleDelete(user.id)}
+                                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                     
@@ -255,6 +255,7 @@ const Users: React.FC = () => {
                   onSubmit={handleFormSubmit} 
                   initialData={editingUser || undefined}
                   isEditing={!!editingUser}
+                  currentUserRole={currentUser?.role || 'staff'}
               />
             </motion.div>
           </motion.div>
@@ -269,9 +270,10 @@ interface UserFormProps {
     onSubmit: (data: Partial<UserType>) => void;
     initialData?: UserType;
     isEditing?: boolean;
+    currentUserRole: 'admin' | 'manager' | 'staff';
 }
 
-const UserForm: React.FC<UserFormProps> = ({ onClose, onSubmit, initialData, isEditing }) => {
+const UserForm: React.FC<UserFormProps> = ({ onClose, onSubmit, initialData, isEditing, currentUserRole }) => {
   const { t } = useThemeStore();
   
   const userSchema = z.object({
@@ -302,7 +304,6 @@ const UserForm: React.FC<UserFormProps> = ({ onClose, onSubmit, initialData, isE
   });
 
   const onValidSubmit = (data: FormValues) => {
-    // Plan is inherited from owner, so it's not selectable here
     onSubmit(data as Partial<UserType>);
   };
 
@@ -353,6 +354,8 @@ const UserForm: React.FC<UserFormProps> = ({ onClose, onSubmit, initialData, isE
             >
                 <option value="staff">{t('Staff')}</option>
                 <option value="manager">{t('Manager')}</option>
+                {/* Only Admin can assign Admin role */}
+                {currentUserRole === 'admin' && <option value="admin">{t('Admin')}</option>}
             </select>
             {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role.message}</p>}
         </div>
@@ -368,6 +371,13 @@ const UserForm: React.FC<UserFormProps> = ({ onClose, onSubmit, initialData, isE
             </select>
         </div>
       </div>
+
+      {currentUserRole !== 'admin' && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg flex items-start space-x-2 text-xs text-blue-700 dark:text-blue-300">
+              <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+              <p>Managers can only create or edit Staff and Manager roles within their shop.</p>
+          </div>
+      )}
 
       <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
         <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">{t('Cancel')}</button>

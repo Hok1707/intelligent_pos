@@ -1,3 +1,4 @@
+
 # SmartPOS - AI-Powered Smartphone Shop Management System
 
 SmartPOS is a comprehensive SaaS solution designed for smartphone retailers. It combines Point of Sale (POS), Inventory Management, Customer Relationship Management (CRM), and advanced AI tools powered by Google Gemini.
@@ -21,8 +22,15 @@ This project is built with a modern React stack, utilizing a mock backend (`axio
 
 ## ✨ Functional Features
 
+### 🛒 Point of Sale (POS) & Orders
+*   **POS Interface**: Fast and intuitive interface for ringing up sales. Browse products, add to cart, and checkout.
+*   **Payments**: Integrated payment modal supporting Cash, Card, and **Bakong KHQR** (Mocked) integration.
+*   **Order Management**: View order history with status filtering (Paid/Pending/Cancelled), sorting, and payment updates.
+*   **Auto-Stock Deduction**: Creating an order automatically reduces inventory levels.
+
 ### 📊 Dashboard & Analytics
-*   **Real-time Overview**: Key metrics tracking (Total Stock Value, Low Stock Items, Monthly Revenue).
+*   **Real-time Overview**: Key metrics tracking (Total Sales, Sales Today, Low Stock Items).
+*   **Recent Orders**: Quick view of the latest transactions directly on the dashboard.
 *   **Interactive Charts**: Visual sales trends (Bar/Line charts) and inventory distribution.
 *   **Low Stock Alerts**: Instant notifications for items falling below configurable thresholds.
 
@@ -56,8 +64,9 @@ This project is built with a modern React stack, utilizing a mock backend (`axio
 
 ### 👤 User & Access Management
 *   **Multi-User Support**: Add employees (Managers/Staff) based on subscription limits.
-*   **RBAC**: Strict Role-Based Access Control ensuring Staff cannot perform sensitive actions (like deleting stock).
+*   **RBAC**: Strict Role-Based Access Control.
 *   **Plan Management**: View and upgrade subscription tiers (Starter, Pro, Enterprise).
+*   **Subscriber Management**: (Super Admin Only) View and manage all platform subscribers and their plans across all shops.
 
 ### ⚙️ General Settings
 *   **Dark Mode**: Fully supported dark theme.
@@ -87,17 +96,19 @@ The system defines three primary roles: `admin`, `manager`, and `staff`.
 | :--- | :---: | :---: | :---: |
 | **Scope** | All Shops | Own Shop Only | Own Shop Only |
 | **View Dashboard** | ✅ | ✅ | ✅ |
-| **Manage Stock** | ✅ (Create/Edit/Delete) | ✅ (Create/Edit/Delete) | ⚠️ View/Edit Only (No Delete) |
+| **Manage Stock** | ✅ (Create/Edit/Delete) | ✅ (Create/Edit/Delete) | ✅ (Create/Edit/Delete) |
 | **View Reports** | ✅ | ✅ | ❌ |
-| **Manage Users** | ✅ | ✅ | ❌ |
+| **Manage Users** | ✅ | ✅ (Staff/Mgr only) | ❌ |
+| **Manage Subscribers** | ✅ | ❌ | ❌ |
 | **Manage Plans** | ✅ | ✅ | ❌ |
+| **POS & Orders** | ✅ | ✅ | ✅ |
 | **Billing/Invoices** | ✅ | ✅ | ✅ |
 | **AI Tools** | ✅ | ✅ | ✅ |
 | **Export Data** | ✅ | ✅ | ❌ |
 
 ### Implementation Details
-*   **UI Level**: Navigation links (Reports, Users, Plans) are hidden for Staff in `Layout.tsx`. Action buttons (Delete Stock, Add User) are hidden in respective pages (`Stock.tsx`, `Users.tsx`).
-*   **API Level**: The mock backend (`api.ts`) inspects the user's role before processing sensitive requests (`DELETE`, `POST /users`) and returns `403 Forbidden` if unauthorized.
+*   **UI Level**: Navigation links (Reports, Users, Plans, Subscribers) are hidden for specific roles in `Layout.tsx` using `allowedRoles` or `deniedRole` properties.
+*   **API Level**: The mock backend (`api.ts`) inspects the user's role before processing sensitive requests.
 
 ---
 
@@ -117,7 +128,7 @@ interface User {
 }
 ```
 
-### StockItem
+### StockItem (Product)
 ```typescript
 interface StockItem {
   id: string;
@@ -131,28 +142,16 @@ interface StockItem {
 }
 ```
 
-### Customer
+### Order
 ```typescript
-interface Customer {
+interface Order {
   id: string;
-  shopId: string;      // Partition Key
-  name: string;
-  email: string;
-  phone: string;
-  totalSpent: number;
-  // ... address, notes
-}
-```
-
-### Invoice
-```typescript
-interface Invoice {
-  id: string;
-  shopId: string;      // Partition Key
-  customerName: string;
+  shopId: string;
+  orderNumber: string;
   total: number;
-  status: 'paid' | 'pending' | 'overdue';
-  items: InvoiceItem[];
+  status: 'pending' | 'paid' | 'cancelled';
+  items: OrderItem[];
+  // ...
 }
 ```
 
@@ -169,12 +168,12 @@ All endpoints are prefixed with `/api/v1` (simulated).
 
 ### Resources
 *   `GET /stock`: Returns items for current `shopId`.
-*   `POST /stock`: Create item (Manager/Staff).
-*   `PUT /stock/:id`: Update item (Manager/Staff).
-*   `DELETE /stock/:id`: Delete item (**Manager Only**).
-*   `GET /users`: Returns employees for current `shopId`.
+*   `POST /stock`: Create item.
+*   `DELETE /stock/:id`: Delete item (Available to all roles in store context).
+*   `GET /orders`: List orders.
+*   `POST /orders`: Create new order (POS).
+*   `GET /users`: Returns employees for current `shopId` (Or all if Admin).
 *   `POST /users`: Create employee (**Manager Only**).
-*   `DELETE /users/:id`: Delete employee (**Manager Only**).
 
 ---
 
@@ -188,4 +187,4 @@ To migrate this from the mock adapter to a real backend (Node.js/Python/Go):
     *   Verify the JWT token.
     *   Extract `shopId` and `role` from the token claims or database.
     *   Inject `shopId` into every database query to ensure isolation.
-4.  **RBAC Middleware**: Create a middleware to check permissions (e.g., `requireRole(['manager', 'admin'])`) for sensitive routes.
+4.  **RBAC Middleware**: Create a middleware to check permissions for sensitive routes.

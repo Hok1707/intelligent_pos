@@ -23,6 +23,7 @@ const translations: Record<string, Record<Language, string>> = {
   'AI Studio': { en: 'AI Studio', km: 'ស្ទូឌីយោ AI' },
   'Users': { en: 'Users', km: 'អ្នកប្រើប្រាស់' },
   'Employees': { en: 'Employees', km: 'បុគ្គលិក' },
+  'Subscribers': { en: 'Subscribers', km: 'អ្នកជាវ' },
   'Customers': { en: 'Customers', km: 'អតិថិជន' },
   'Billing': { en: 'Billing', km: 'វិក្កយបត្រ' },
   'Sign Out': { en: 'Sign Out', km: 'ចាកចេញ' },
@@ -54,6 +55,17 @@ const translations: Record<string, Record<Language, string>> = {
   'Inactive': { en: 'Inactive', km: 'អសកម្ម' },
   'Plan': { en: 'Plan', km: 'គម្រោង' },
   'No users found': { en: 'No employees found', km: 'រកមិនឃើញបុគ្គលិកទេ' },
+
+  // Subscriber Management
+  'Subscriber Management': { en: 'Subscriber Management', km: 'ការគ្រប់គ្រងអ្នកជាវ' },
+  'Total Subscribers': { en: 'Total Subscribers', km: 'អ្នកជាវសរុប' },
+  'Monthly Revenue (Est)': { en: 'Monthly Revenue (Est)', km: 'ចំណូលប្រចាំខែ (ប៉ាន់ស្មាន)' },
+  'Enterprise Users': { en: 'Enterprise Users', km: 'អ្នកប្រើប្រាស់សហគ្រាស' },
+  'All Plans': { en: 'All Plans', km: 'គ្រប់គម្រោង' },
+  'All Roles': { en: 'All Roles', km: 'គ្រប់តួនាទី' },
+  'Shop ID': { en: 'Shop ID', km: 'លេខសម្គាល់ហាង' },
+  'User': { en: 'User', km: 'អ្នកប្រើប្រាស់' },
+  'No subscribers found': { en: 'No subscribers found matching criteria.', km: 'រកមិនឃើញអ្នកជាវដែលត្រូវនឹងលក្ខខណ្ឌទេ។' },
 
   // Customer Management
   'Customer Management': { en: 'Customer Management', km: 'ការគ្រប់គ្រងអតិថិជន' },
@@ -177,6 +189,9 @@ const translations: Record<string, Record<Language, string>> = {
   'This action cannot be undone.': { en: 'This action cannot be undone.', km: 'សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។' },
   'Rename Category': { en: 'Rename Category', km: 'ប្តូរឈ្មោះប្រភេទ' },
   'Remove Category': { en: 'Remove Category', km: 'លុបប្រភេទ' },
+  'Product Image': { en: 'Product Image', km: 'រូបភាពផលិតផល' },
+  'Upload Image': { en: 'Upload Image', km: 'បង្ហោះរូបភាព' },
+  'Remove Image': { en: 'Remove Image', km: 'លុបរូបភាព' },
 
   // Form Validation
   'Name required': { en: 'Name is required', km: 'ត្រូវការឈ្មោះ' },
@@ -314,6 +329,7 @@ const translations: Record<string, Record<Language, string>> = {
   'Password': { en: 'Password', km: 'ពាក្យសម្ងាត់' },
   'Forgot password?': { en: 'Forgot password?', km: 'ភ្លេចពាក្យសម្ងាត់?' },
   'Sign In': { en: 'Sign In', km: 'ចូលគណនី' },
+  'Sign in with Google': { en: 'Sign in with Google', km: 'ចូលជាមួយ Google' },
   'No account': { en: "Don't have an account?", km: "មិនទាន់មានគណនី?" },
   'Sign up': { en: 'Sign up', km: 'ចុះឈ្មោះ' },
   'Back to Login': { en: 'Back to Login', km: 'ត្រឡប់ទៅចូលគណនីវិញ' },
@@ -357,6 +373,19 @@ const translations: Record<string, Record<Language, string>> = {
   'Password Reset Successful': { en: 'Password reset successful! Redirecting to login...', km: 'ការកំណត់ពាក្យសម្ងាត់ឡើងវិញបានជោគជ័យ! កំពុងបញ្ជូនទៅការចូល...' },
   'Open Email (Simulated)': { en: 'Open Email (Simulated)', km: 'បើកអ៊ីមែល (សាកល្បង)' },
   'Sending...': { en: 'Sending...', km: 'កំពុងផ្ញើ...' },
+
+  // Orders
+  'Order Details': { en: 'Order Details', km: 'ព័ត៌មានលម្អិតការបញ្ជាទិញ' },
+  'Order Information': { en: 'Order Information', km: 'ព័ត៌មានការបញ្ជាទិញ' },
+  'Payment Information': { en: 'Payment Information', km: 'ព័ត៌មានការទូទាត់' },
+  'Delete Order': { en: 'Delete Order', km: 'លុបការបញ្ជាទិញ' },
+  'Order Items': { en: 'Order Items', km: 'មុខទំនិញបញ្ជាទិញ' },
+  'Payment Method': { en: 'Payment Method', km: 'វិធីសាស្រ្តទូទាត់' },
+  'Current Order': { en: 'Current Order', km: 'ការបញ្ជាទិញបច្ចុប្បន្ន' },
+  'Checkout': { en: 'Checkout', km: 'គិតប្រាក់' },
+  'Search products...': { en: 'Search products...', km: 'ស្វែងរកផលិតផល...' },
+  'Orders & Transactions': { en: 'Orders & Transactions', km: 'ការបញ្ជាទិញ & ប្រតិបត្តិការ' },
+  'Mark Paid': { en: 'Mark Paid', km: 'សម្គាល់ថាបានបង់' },
 };
 
 export const useThemeStore = create<ThemeState>()(

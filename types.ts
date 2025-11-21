@@ -1,5 +1,4 @@
 
-
 export type SubscriptionTier = 'starter' | 'pro' | 'enterprise';
 
 export interface User {
@@ -41,9 +40,22 @@ export interface StockItem {
   sku: string;
   category: string;
   price: number;
+  costPrice: number;
   quantity: number;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock';
   brand: string;
+  image?: string; // Base64 image string or URL
+}
+
+export interface StockLog {
+  id: string;
+  stockId: string;
+  shopId: string;
+  action: 'create' | 'update' | 'delete' | 'bulk_update';
+  userId: string;
+  userName: string;
+  details: string;
+  timestamp: string;
 }
 
 export interface SubscriptionPlan {
@@ -116,4 +128,25 @@ export interface Invoice {
   tax: number;
   total: number;
   status: 'paid' | 'pending' | 'overdue';
+}
+
+export interface OrderItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+export interface Order {
+  id: string;
+  shopId: string;
+  orderNumber: string;
+  customerName: string;
+  subtotal: number;
+  tax: number; // assuming flat rate or calc
+  total: number;
+  status: 'pending' | 'paid' | 'cancelled';
+  paymentMethod: 'cash' | 'khqr' | 'card';
+  items: OrderItem[];
+  createdAt: string;
 }

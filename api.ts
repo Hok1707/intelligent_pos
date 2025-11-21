@@ -83,10 +83,10 @@ let MOCK_USERS: User[] = [
 ];
 
 let MOCK_STOCK: StockItem[] = [
-  { id: '1', shopId: 'shop_1', name: 'iPhone 15 Pro', sku: 'APL-15P-128', brand: 'Apple', category: 'Phone', price: 999, quantity: 12, status: 'In Stock' },
-  { id: '2', shopId: 'shop_1', name: 'Samsung S24 Ultra', sku: 'SAM-S24U-256', brand: 'Samsung', category: 'Phone', price: 1199, quantity: 4, status: 'Low Stock' },
-  { id: '3', shopId: 'shop_1', name: 'USB-C Cable', sku: 'ACC-USBC-1M', brand: 'Generic', category: 'Accessory', price: 19, quantity: 50, status: 'In Stock' },
-  { id: '4', shopId: 'shop_1', name: 'Pixel 8', sku: 'GOO-P8-128', brand: 'Google', category: 'Phone', price: 699, quantity: 0, status: 'Out of Stock' },
+  { id: '1', shopId: 'shop_1', name: 'iPhone 15 Pro', sku: 'APL-15P-128', brand: 'Apple', category: 'Phone', price: 999, costPrice: 850, quantity: 12, status: 'In Stock' },
+  { id: '2', shopId: 'shop_1', name: 'Samsung S24 Ultra', sku: 'SAM-S24U-256', brand: 'Samsung', category: 'Phone', price: 1199, costPrice: 950, quantity: 4, status: 'Low Stock' },
+  { id: '3', shopId: 'shop_1', name: 'USB-C Cable', sku: 'ACC-USBC-1M', brand: 'Generic', category: 'Accessory', price: 19, costPrice: 5, quantity: 50, status: 'In Stock' },
+  { id: '4', shopId: 'shop_1', name: 'Pixel 8', sku: 'GOO-P8-128', brand: 'Google', category: 'Phone', price: 699, costPrice: 550, quantity: 0, status: 'Out of Stock' },
 ];
 
 let MOCK_CUSTOMERS: Customer[] = [
